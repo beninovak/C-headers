@@ -1,6 +1,11 @@
-# Ignore text files that are multiple gigabytes in size
+# Ignore big text files
 *gb.txt
+*big.txt
 
 # Executables
 run
 *.exe
+
+# Old files
+*old
+old*
