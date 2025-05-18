@@ -1,1 +1,2 @@
-text_
+# Ignore text files that are multiple gigabytes in size
+gb.txt
