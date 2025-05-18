@@ -1,2 +1,6 @@
 # Ignore text files that are multiple gigabytes in size
-gb.txt
+*gb.txt
+
+# Executables
+run
+*.exe
