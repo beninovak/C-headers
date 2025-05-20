@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 //#define BUFFER_SIZE 16777216 -> TOO BIG
 #define BUFFER_SIZE 65536 // Kinda arbitrary ngl...
@@ -26,7 +27,7 @@ typedef struct {
 
 typedef struct {
     uint32_t line_count;
-    _file_line* lines;
+    _file_line** lines;
 } _file;
 
 /*
@@ -73,27 +74,32 @@ _file* file_read(FILE* fptr) {
     uint32_t line_count = file_read_get_lines(fptr);
     _file* file = (_file*)calloc(1, sizeof(_file*));
     file->line_count = file_read_get_lines(fptr);
-    // file->lines = (_file_line*)calloc(line_count, sizeof(_file_line*));
-    file->lines = NULL;
-    //
-    // char* line = NULL;
-    // size_t size = 0;
-    // ssize_t line_size;
-    // _file_line* fline;
-    // int count = 0;
-    //
-    // while(line_size = getline(&line, &size, fptr) != -1) {
-    //     fline = calloc(1, sizeof(uint32_t) + (line_size * sizeof(char)));
-    //     fline->size = (uint32_t)line_size;
-    //     fline->line = *line;
-    //
-    //     // char* temp_line = calloc(fline->size, sizeof(char));
-    //     fline->start = line;
-    //     file->lines[count] = fline;
-    //
-    //     count++;
-    //     fline = NULL;
-    // }
+    file->lines = (_file_line**)calloc(line_count, sizeof(_file_line*));
+    // file->lines = NULL;
+
+    printf("%p\n", file->lines);
+    char* line = NULL;
+    size_t size = 0;
+    ssize_t line_size;
+    _file_line* fline;
+
+    while((line_size = getline(&line, &size, fptr)) != -1) {
+        // printf("%p - %s\n", &line, line);
+        fline = (_file_line*)calloc(1, sizeof(uint32_t) + line_size + 1);
+        fline->size = (uint32_t)line_size;
+
+        // char* temp_line = (char*)calloc(line_size, sizeof(char));
+        // temp_line = line;
+        // printf("%p, %s\n", temp_line, temp_line);
+
+        fline->start = (char*)calloc(fline->size + 1, sizeof(char));
+        memcpy(fline->start, line, line_size);
+        // fline->start = line;
+        printf("%p, %s\n", fline->start, fline->start);
+        
+        // free(fline);
+        fline = NULL;
+    }
 
     return file;
 }
