@@ -75,30 +75,21 @@ _file* file_read(FILE* fptr) {
     _file* file = (_file*)calloc(1, sizeof(_file*));
     file->line_count = file_read_get_lines(fptr);
     file->lines = (_file_line**)calloc(line_count, sizeof(_file_line*));
-    // file->lines = NULL;
 
     printf("%p\n", file->lines);
     char* line = NULL;
     size_t size = 0;
     ssize_t line_size;
-    _file_line* fline;
 
+    int count = 0;
     while((line_size = getline(&line, &size, fptr)) != -1) {
-        // printf("%p - %s\n", &line, line);
-        fline = (_file_line*)calloc(1, sizeof(uint32_t) + line_size + 1);
-        fline->size = (uint32_t)line_size;
-
-        // char* temp_line = (char*)calloc(line_size, sizeof(char));
-        // temp_line = line;
-        // printf("%p, %s\n", temp_line, temp_line);
-
-        fline->start = (char*)calloc(fline->size + 1, sizeof(char));
-        memcpy(fline->start, line, line_size);
-        // fline->start = line;
-        printf("%p, %s\n", fline->start, fline->start);
-        
-        // free(fline);
-        fline = NULL;
+        if (count < line_count) {
+            file->lines[count] = (_file_line*)calloc(1, sizeof(uint32_t) + sizeof(char*));
+            file->lines[count]->size = line_size;
+            file->lines[count]->start = (char*)calloc(line_size, sizeof(char));
+            memcpy(file->lines[count]->start, line, line_size);
+        }
+        count++;
     }
 
     return file;

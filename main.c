@@ -13,11 +13,11 @@ int main() {
     //printf("Number of lines: %ld\n", num_lines);
 
     _file* file = file_read(fptr);
-    printf("Line count: %d", file->line_count);
+    printf("Line count: %u", file->line_count);
 
-    // for(int i = 0; i < file->line_count; i++) {
-    //     printf("%u\n", file->lines[i].size);
-    // }
+    for(int i = 0; i < file->line_count; i++) {
+        printf("%u - %s\n", file->lines[i]->size, file->lines[i]->start);
+    }
 
     double total_time = (double)(clock() - start_time) / CLOCKS_PER_SEC;
     printf("\nTime elapsed: %f\n", total_time);
