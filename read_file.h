@@ -76,7 +76,6 @@ _file* file_read(FILE* fptr) {
     file->line_count = file_read_get_lines(fptr);
     file->lines = (_file_line**)calloc(line_count, sizeof(_file_line*));
 
-    printf("%p\n", file->lines);
     char* line = NULL;
     size_t size = 0;
     ssize_t line_size;
