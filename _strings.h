@@ -50,3 +50,11 @@ _tokens* _strings_tokenize(char* _str, char separator) {
     }
     return toks;
 }
+
+void _tokens_free(_tokens* tokens) {
+    for(int i = 0; i < tokens->size; i++) {
+        free(tokens->tokens[i]);
+    }
+    free(tokens->tokens);
+    free(tokens);
+}

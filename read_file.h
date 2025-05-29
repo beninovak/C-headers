@@ -99,5 +99,6 @@ void _file_free(_file* file) {
         free(file->lines[i]->start);
         free(file->lines[i]);
     }
+    free(file->lines);
     free(file);
 }
