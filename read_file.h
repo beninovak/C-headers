@@ -93,3 +93,11 @@ _file* file_read(FILE* fptr) {
 
     return file;
 }
+
+void _file_free(_file* file) {
+    for(int i = 0; i < file->line_count; i++) {
+        free(file->lines[i]->start);
+        free(file->lines[i]);
+    }
+    free(file);
+}
