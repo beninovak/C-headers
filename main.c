@@ -20,14 +20,21 @@ int main() {
     //     printf("%u - %s\n", file->lines[i]->size, file->lines[i]->start);
     // }
     
-    char test[50] = "Hello world. An other test     YAYAYA YA";
-    _tokens* tokens = _strings_tokenize(test, ' ');
+    char test[50] = "28,13,89,98,96,16,49";
+    _tokens* tokens = _strings_tokenize(test, ',');
 
+    printf("Size: %d -> ", tokens->size);
     for(int i = 0; i < tokens->size; i++) {
         printf("%s(%lu) ", tokens->tokens[i], strlen(tokens->tokens[i]));
     }
     printf("\n");
 
+    _tokens_sort(tokens, 1);
+    printf("Size: %d -> ", tokens->size);
+    for(int i = 0; i < tokens->size; i++) {
+        printf("%s(%lu) ", tokens->tokens[i], strlen(tokens->tokens[i]));
+    }
+    printf("\n");
     double total_time = (double)(clock() - start_time) / CLOCKS_PER_SEC;
     printf("\nTime elapsed: %f\n", total_time);
     return 0;
