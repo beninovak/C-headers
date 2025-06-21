@@ -12,7 +12,7 @@ typedef struct {
 } _tokens;
 
 
-_tokens* _strings_tokenize(char* _str, char separator) {
+_tokens* _string_tokenize(char* _str, char separator) {
     int length = strlen(_str);
 
     int token_count = 0;
@@ -64,7 +64,7 @@ int _tokens_comparator_descending(const void* tok1, const void* tok2) {
 void _tokens_sort(_tokens* toks, int order) {
     if (order != 1 && order != -1) {
         errno = 22;
-        perror("Invalid order value. order argument must be 1 (ascending) or -1(descending)!");
+        perror("Invalid order value. order argument must be 1 (ascending) or -1 (descending)!");
         return exit(0);
     }
 
