@@ -52,7 +52,7 @@ uint32_t file_read_get_lines(FILE* fptr) {
             return -1;
         }
 
-        for(int i = 0; i < bytes; i++) {
+        for(uint32_t i = 0; i < bytes; i++) {
             if (buffer[i] == NEWLINE_CHAR) {
                 lines++;
             }
@@ -80,7 +80,7 @@ _file* file_read(FILE* fptr) {
     size_t size = 0;
     ssize_t line_size;
 
-    int count = 0;
+    uint32_t count = 0;
     while((line_size = getline(&line, &size, fptr)) != -1) {
         if (count < line_count) {
             file->lines[count] = (_file_line*)calloc(1, sizeof(uint32_t) + sizeof(char*));
@@ -95,7 +95,7 @@ _file* file_read(FILE* fptr) {
 }
 
 void _file_free(_file* file) {
-    for(int i = 0; i < file->line_count; i++) {
+    for(uint32_t i = 0; i < file->line_count; i++) {
         free(file->lines[i]->start);
         free(file->lines[i]);
     }
