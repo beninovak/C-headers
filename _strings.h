@@ -11,7 +11,6 @@ typedef struct {
     char** tokens;
 } _tokens;
 
-
 _tokens* _string_tokenize(char* _str, char separator) {
     uint32_t length = strlen(_str);
 
@@ -73,6 +72,14 @@ void _tokens_sort(_tokens* toks, int8_t order) {
     } else {
         qsort(toks->tokens, toks->size, sizeof(char*), _tokens_comparator_descending); 
     }
+}
+
+uint32_t _string_count_occurrences(char* str, char search) {
+    uint32_t count = 0;
+    for(uint32_t i = 0; i < strlen(str); i++) {
+        if (str[i] == search) count++;
+    }
+    return count;
 }
 
 void _tokens_free(_tokens* tokens) {

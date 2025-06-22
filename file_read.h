@@ -94,7 +94,7 @@ _file* file_read(FILE* fptr) {
     return file;
 }
 
-void _file_free(_file* file) {
+void file_free(_file* file) {
     for(uint32_t i = 0; i < file->line_count; i++) {
         free(file->lines[i]->start);
         free(file->lines[i]);
