@@ -1,4 +1,5 @@
 # Ignore big text files
+*kb.txt
 *gb.txt
 *big.txt
 

@@ -26,7 +26,7 @@ typedef struct {
 } _file_line;
 
 typedef struct {
-    uint32_t line_count;
+    uint64_t line_count;
     _file_line** lines;
 } _file;
 
@@ -39,12 +39,12 @@ typedef struct {
  *      - If fptr is NULL, returns -1
  *      - If fptr is NOT NULL, returns the number of lines.
  */
-uint32_t file_read_get_lines(FILE* fptr) {
+uint64_t file_read_get_lines(FILE* fptr) {
     if (fptr == NULL) return -1;
     rewind(fptr);
 
     char buffer[BUFFER_SIZE];
-    uint32_t lines = 0;
+    uint64_t lines = 0;
 
     while(1) {
         size_t bytes = fread(buffer, 1, BUFFER_SIZE, fptr);
@@ -65,15 +65,19 @@ uint32_t file_read_get_lines(FILE* fptr) {
     
     rewind(fptr);
 
-    return lines;
+    return lines > 0 ? lines : 1; // If no new line character exists, there is only one line.
 }
 
 _file* file_read(FILE* fptr) {
     if (fptr == NULL) return NULL;
+    uint64_t line_count = file_read_get_lines(fptr);
+    if (line_count == -1) return NULL;
+    _file* file = NULL;
+    file = (_file*)calloc(1, sizeof(uint64_t) + sizeof(_file_line**));
+    
+    if (file == NULL) return NULL;
 
-    uint32_t line_count = file_read_get_lines(fptr);
-    _file* file = (_file*)calloc(1, sizeof(_file*));
-    file->line_count = file_read_get_lines(fptr);
+    file->line_count = line_count;
     file->lines = (_file_line**)calloc(line_count, sizeof(_file_line*));
 
     char* line = NULL;
@@ -82,23 +86,49 @@ _file* file_read(FILE* fptr) {
 
     uint32_t count = 0;
     while((line_size = getline(&line, &size, fptr)) != -1) {
+        if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
+
         if (count < line_count) {
+            // file->lines[count] = (_file_line*)calloc(1, sizeof(_file_line*));
             file->lines[count] = (_file_line*)calloc(1, sizeof(uint32_t) + sizeof(char*));
-            file->lines[count]->size = line_size;
+            if (file->lines[count] == NULL) continue;
+
+            file->lines[count]->size = (uint32_t)line_size;
             file->lines[count]->start = (char*)calloc(line_size, sizeof(char));
+            if (file->lines[count]->start == NULL) {
+                free(file->lines[count]);
+                file->lines[count] = NULL;
+                continue;
+            }
             memcpy(file->lines[count]->start, line, line_size);
         }
+        free(line);
+        line = NULL; // Just in case
         count++;
     }
+    free(line);
+    line = NULL;
 
     return file;
 }
 
 void file_free(_file* file) {
     for(uint32_t i = 0; i < file->line_count; i++) {
-        free(file->lines[i]->start);
-        free(file->lines[i]);
+        if (file->lines[i]->start != NULL) {
+            free(file->lines[i]->start);
+            // file->lines[i]->start = NULL;
+        }
+        if (file->lines[i] != NULL) {
+            free(file->lines[i]);
+            file->lines[i] = NULL;
+        }
     }
-    free(file->lines);
-    free(file);
+    if (file->lines != NULL) {
+        free(file->lines);
+        file->lines = NULL;
+    }
+    if (file != NULL) {
+        free(file);
+        file = NULL;
+    }
 }
