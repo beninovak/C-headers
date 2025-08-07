@@ -21,7 +21,7 @@
 #endif
 
 typedef struct {
-    uint32_t size;
+    uint64_t size;
     char* start;
 } _file_line;
 
@@ -89,11 +89,10 @@ _file* file_read(FILE* fptr) {
         if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
 
         if (count < line_count) {
-            // file->lines[count] = (_file_line*)calloc(1, sizeof(_file_line*));
-            file->lines[count] = (_file_line*)calloc(1, sizeof(uint32_t) + sizeof(char*));
+            file->lines[count] = (_file_line*)calloc(1, sizeof(uint64_t) + sizeof(char*));
             if (file->lines[count] == NULL) continue;
 
-            file->lines[count]->size = (uint32_t)line_size;
+            file->lines[count]->size = (uint64_t)line_size;
             file->lines[count]->start = (char*)calloc(line_size, sizeof(char));
             if (file->lines[count]->start == NULL) {
                 free(file->lines[count]);
