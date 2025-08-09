@@ -8,7 +8,7 @@
 int main() {
     clock_t start_time = clock();
 
-    FILE* fptr = fopen("text_1kb.txt", "rb");
+    FILE* fptr = fopen("geometry_for_ocelots.txt", "rb");
     long num_lines = file_read_get_lines(fptr);
 
     printf("Sizeof ssize_t: %lu\n", sizeof(ssize_t));
@@ -20,9 +20,9 @@ int main() {
     fclose(fptr);
     printf("Line count: %lu\n", file->line_count);
 
-    // for(int i = 0; i < file->line_count; i++) {
-    //     printf("%u - %s\n", file->lines[i]->size, file->lines[i]->start);
-    // }
+    for(int i = 0; i < file->line_count; i++) {
+        printf("%lu - %s\n", file->lines[i].size, file->lines[i].start);
+    }
     //
     // char test[50] = "28,13,89";
     // _tokens* tokens = _string_tokenize(test, ',');

@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct {
     uint64_t line_count;
-    _file_line** lines;
+    _file_line* lines;
 } _file;
 
 /*
@@ -78,7 +78,7 @@ _file* file_read(FILE* fptr) {
     if (file == NULL) return NULL;
 
     file->line_count = line_count;
-    file->lines = (_file_line**)calloc(line_count, sizeof(_file_line*));
+    file->lines = (_file_line*)calloc(line_count, sizeof(_file_line));
 
     char* line = NULL;
     size_t size = 0;
@@ -89,17 +89,12 @@ _file* file_read(FILE* fptr) {
         if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
 
         if (count < line_count) {
-            file->lines[count] = (_file_line*)calloc(1, sizeof(uint64_t) + sizeof(char*));
-            if (file->lines[count] == NULL) continue;
-
-            file->lines[count]->size = (uint64_t)line_size;
-            file->lines[count]->start = (char*)calloc(line_size, sizeof(char));
-            if (file->lines[count]->start == NULL) {
-                free(file->lines[count]);
-                file->lines[count] = NULL;
+            file->lines[count].size = (uint64_t)line_size;
+            file->lines[count].start = (char*)calloc(line_size, sizeof(char));
+            if (file->lines[count].start == NULL) {
                 continue;
             }
-            memcpy(file->lines[count]->start, line, line_size);
+            memcpy(file->lines[count].start, line, line_size);
         }
         free(line);
         line = NULL; // Just in case
@@ -113,13 +108,8 @@ _file* file_read(FILE* fptr) {
 
 void file_free(_file* file) {
     for(uint32_t i = 0; i < file->line_count; i++) {
-        if (file->lines[i]->start != NULL) {
-            free(file->lines[i]->start);
-            // file->lines[i]->start = NULL;
-        }
-        if (file->lines[i] != NULL) {
-            free(file->lines[i]);
-            file->lines[i] = NULL;
+        if (file->lines[i].start != NULL) {
+            free(file->lines[i].start);
         }
     }
     if (file->lines != NULL) {
