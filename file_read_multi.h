@@ -1,0 +1,157 @@
+#pragma once
+#include <sched.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <pthread.h>
+
+//#define BUFFER_SIZE 16777216 -> TOO BIG
+#define BUFFER_SIZE 65536 // Kinda arbitrary ngl...
+
+#ifdef _WIN32
+#define NEWLINE_CHAR '\r'
+
+#elif __linux__
+#define NEWLINE_CHAR '\n'
+
+#elif __APPLE__
+#define NEWLINE_CHAR '\n'
+
+#else
+#error "OS not supported!"
+#endif
+
+typedef struct {
+    uint64_t size;
+    char* start;
+} _file_line;
+
+typedef struct {
+    uint64_t line_count;
+    _file_line* lines;
+} _file;
+
+typedef struct {
+    FILE* fptr;
+    uint32_t start_line_index;
+    uint32_t end_line_index;
+} _file_arg;
+
+uint32_t file_read_line_count;
+
+_file* __file;
+
+uint64_t file_read_get_lines(FILE* fptr) {
+    if (fptr == NULL) return -1;
+    rewind(fptr);
+
+    char buffer[BUFFER_SIZE];
+    uint64_t lines = 0;
+
+    while(1) {
+        size_t bytes = fread(buffer, 1, BUFFER_SIZE, fptr);
+        if (ferror(fptr)) {
+            return -1;
+        }
+
+        for(uint32_t i = 0; i < bytes; i++) {
+            if (buffer[i] == NEWLINE_CHAR) {
+                lines++;
+            }
+        }
+
+        if (feof(fptr)) {
+            break;
+        }
+    }
+    
+    rewind(fptr);
+
+    return lines > 0 ? lines : 1; // If no new line character exists, there is only one line.
+}
+
+void* file_read_partial(void* args) { // args is of type _file_arg*
+    // Check if thread wants to read more lines than are left -> if total read lines exceeds file_read_line_coun
+
+    _file_arg* arg_internal = (_file_arg*)args;
+
+    char* line = NULL;
+    size_t size = 0; // use this with 'count' to restrict which line to read from?
+    ssize_t line_size;
+
+    uint32_t count = 0;
+    while((line_size = getline(&line, &size, arg_internal->fptr)) != -1) {
+        if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
+
+        if (count < file_read_line_count) {
+            __file->lines[count].size = (uint64_t)line_size;
+            __file->lines[count].start = (char*)calloc(line_size, sizeof(char));
+            if (__file->lines[count].start != NULL) {
+                memcpy(__file->lines[count].start, line, line_size);
+            }
+        }
+        free(line);
+        line = NULL; // Just in case
+        count++;
+    }
+    free(line);
+    line = NULL;
+
+    return calloc(1, 1);
+}
+
+_file* file_read(FILE* fptr) {
+    if (fptr == NULL) return NULL;
+    file_read_line_count = file_read_get_lines(fptr);
+    if (file_read_line_count == -1) return NULL;
+
+    __file = (_file*)calloc(1, sizeof(uint64_t) + sizeof(_file_line*));
+    if (__file == NULL) return NULL;
+
+    __file->line_count = file_read_line_count;
+    __file->lines = (_file_line*)calloc(file_read_line_count, sizeof(_file_line));
+
+    const uint8_t thread_count = 16; // Check if there is a better way to get a safe amount
+    uint8_t       created_threads = 0;
+    pthread_t     threads[thread_count];
+    _file_arg     thread_args[thread_count];
+    int           thread_result;
+    uint32_t      lines_per_thread = (uint32_t)(file_read_line_count / thread_count);
+
+    for (uint8_t i = 0; i < thread_count; i++) {
+        thread_args[i] = (_file_arg){ 
+            .fptr = fptr, 
+            .start_line_index = 0 + (i * lines_per_thread), 
+            .end_line_index =  0 + (i * lines_per_thread) + lines_per_thread
+        };
+
+        thread_result = pthread_create(&threads[i], NULL, file_read_partial, (void*)&thread_args[i]);
+        if (thread_result != 0) {
+            perror("pthread_create() failed");
+            continue;
+        }
+    }
+
+    for (uint8_t i = 0; i < created_threads; i++) {
+        pthread_join(threads[i], NULL);
+    }
+        
+    return __file;
+}
+
+void file_free(_file* file) {
+    for(uint32_t i = 0; i < file->line_count; i++) {
+        if (file->lines[i].start != NULL) {
+            free(file->lines[i].start);
+        }
+    }
+    if (file->lines != NULL) {
+        free(file->lines);
+        file->lines = NULL;
+    }
+    if (file != NULL) {
+        free(file);
+        file = NULL;
+    }
+}

@@ -72,8 +72,7 @@ _file* file_read(FILE* fptr) {
     if (fptr == NULL) return NULL;
     uint64_t line_count = file_read_get_lines(fptr);
     if (line_count == -1) return NULL;
-    _file* file = NULL;
-    file = (_file*)calloc(1, sizeof(uint64_t) + sizeof(_file_line**));
+    _file* file = (_file*)calloc(1, sizeof(uint64_t) + sizeof(_file_line*));
     
     if (file == NULL) return NULL;
 
@@ -91,10 +90,9 @@ _file* file_read(FILE* fptr) {
         if (count < line_count) {
             file->lines[count].size = (uint64_t)line_size;
             file->lines[count].start = (char*)calloc(line_size, sizeof(char));
-            if (file->lines[count].start == NULL) {
-                continue;
+            if (file->lines[count].start != NULL) {
+                memcpy(file->lines[count].start, line, line_size);
             }
-            memcpy(file->lines[count].start, line, line_size);
         }
         free(line);
         line = NULL; // Just in case
