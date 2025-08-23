@@ -33,7 +33,7 @@ typedef struct {
 } _file;
 
 typedef struct {
-    FILE* fptr;
+    char* file_name;
     uint32_t start_line_index;
     uint32_t end_line_index;
 } _file_arg;
@@ -42,9 +42,10 @@ uint32_t file_read_line_count;
 
 _file* __file;
 
-uint64_t file_read_get_lines(FILE* fptr) {
-    if (fptr == NULL) return -1;
-    rewind(fptr);
+uint64_t file_read_get_lines(char* file_name) {
+    // if (fptr == NULL) return -1;
+    // rewind(fptr);
+    FILE* fptr = fopen(file_name, "r");
 
     char buffer[BUFFER_SIZE];
     uint64_t lines = 0;
@@ -67,6 +68,7 @@ uint64_t file_read_get_lines(FILE* fptr) {
     }
     
     rewind(fptr);
+    fclose(fptr);
 
     return lines > 0 ? lines : 1; // If no new line character exists, there is only one line.
 }
@@ -76,34 +78,36 @@ void* file_read_partial(void* args) { // args is of type _file_arg*
 
     _file_arg* arg_internal = (_file_arg*)args;
 
+    FILE* fptr = fopen(arg_internal->file_name, "r");
+
     char* line = NULL;
     size_t size = 0; // use this with 'count' to restrict which line to read from?
     ssize_t line_size;
 
+    // TODO - Need to set fseek() to the start index
     uint32_t count = 0;
-    while((line_size = getline(&line, &size, arg_internal->fptr)) != -1) {
-        if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
-
-        if (count < file_read_line_count) {
-            __file->lines[count].size = (uint64_t)line_size;
-            __file->lines[count].start = (char*)calloc(line_size, sizeof(char));
-            if (__file->lines[count].start != NULL) {
-                memcpy(__file->lines[count].start, line, line_size);
-            }
-        }
-        free(line);
-        line = NULL; // Just in case
-        count++;
+    while((line_size = getline(&line, &size, fptr) != -1)) {
+        // if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
+        //
+        // if (count < file_read_line_count) {
+        //     __file->lines[count].size = (uint64_t)line_size;
+        //     __file->lines[count].start = (char*)calloc(line_size, sizeof(char));
+        //     if (__file->lines[count].start != NULL) {
+        //         memcpy(__file->lines[count].start, line, line_size);
+        //     }
+        // }
+        // free(line);
+        // line = NULL; // Just in case
+        // count++;
     }
     free(line);
     line = NULL;
-
     return calloc(1, 1);
 }
 
-_file* file_read(FILE* fptr) {
-    if (fptr == NULL) return NULL;
-    file_read_line_count = file_read_get_lines(fptr);
+_file* file_read(char* file_name) {
+    // if (fptr == NULL) return NULL;
+    file_read_line_count = file_read_get_lines(file_name);
     if (file_read_line_count == -1) return NULL;
 
     __file = (_file*)calloc(1, sizeof(uint64_t) + sizeof(_file_line*));
@@ -121,7 +125,7 @@ _file* file_read(FILE* fptr) {
 
     for (uint8_t i = 0; i < thread_count; i++) {
         thread_args[i] = (_file_arg){ 
-            .fptr = fptr, 
+            .file_name = file_name, 
             .start_line_index = 0 + (i * lines_per_thread), 
             .end_line_index =  0 + (i * lines_per_thread) + lines_per_thread
         };
@@ -133,6 +137,7 @@ _file* file_read(FILE* fptr) {
         }
     }
 
+    // TODO - Skip threads that didn't open or didn't open properly ( thread_result != 0)
     for (uint8_t i = 0; i < created_threads; i++) {
         pthread_join(threads[i], NULL);
     }
