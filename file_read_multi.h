@@ -42,6 +42,9 @@ uint32_t file_read_line_count;
 
 _file* __file;
 
+uint32_t new_lines_size = 32;
+uint32_t* new_line_positions;
+
 uint64_t file_read_get_lines(char* file_name) {
     // if (fptr == NULL) return -1;
     // rewind(fptr);
@@ -50,6 +53,8 @@ uint64_t file_read_get_lines(char* file_name) {
     char buffer[BUFFER_SIZE];
     uint64_t lines = 0;
 
+    new_line_positions = (uint32_t*)calloc(new_lines_size, sizeof(uint32_t));
+    int count = 0;
     while(1) {
         size_t bytes = fread(buffer, 1, BUFFER_SIZE, fptr);
         if (ferror(fptr)) {
@@ -58,6 +63,13 @@ uint64_t file_read_get_lines(char* file_name) {
 
         for(uint32_t i = 0; i < bytes; i++) {
             if (buffer[i] == NEWLINE_CHAR) {
+                if (lines > new_lines_size) {
+                    printf("\n MORE LINES \n");
+                    new_lines_size *= 2;
+                    new_line_positions = (uint32_t*)realloc((void*)new_line_positions, new_lines_size * sizeof(uint32_t));
+                }
+
+                new_line_positions[lines] = (uint32_t)((count * BUFFER_SIZE) + i);
                 lines++;
             }
         }
@@ -65,8 +77,14 @@ uint64_t file_read_get_lines(char* file_name) {
         if (feof(fptr)) {
             break;
         }
+
+        count++;
     }
     
+    for(int i = 0; i < lines; i++) {
+        printf("\n%u", new_line_positions[i]);
+    }
+    free(new_line_positions);
     rewind(fptr);
     fclose(fptr);
 
@@ -99,10 +117,13 @@ void* file_read_partial(void* args) { // args is of type _file_arg*
         // free(line);
         // line = NULL; // Just in case
         // count++;
+        free(line);
+        line = NULL;
     }
     free(line);
     line = NULL;
-    return calloc(1, 1);
+    fclose(fptr);
+    return NULL; 
 }
 
 _file* file_read(char* file_name) {
@@ -117,14 +138,14 @@ _file* file_read(char* file_name) {
     __file->lines = (_file_line*)calloc(file_read_line_count, sizeof(_file_line));
 
     const uint8_t thread_count = 16; // Check if there is a better way to get a safe amount
-    uint8_t       created_threads = 0;
-    pthread_t     threads[thread_count];
-    _file_arg     thread_args[thread_count];
-    int           thread_result;
-    uint32_t      lines_per_thread = (uint32_t)(file_read_line_count / thread_count);
+          uint8_t created_threads = 0;
+        pthread_t threads[thread_count];
+        _file_arg thread_args[thread_count];
+              int thread_result;
+         uint32_t lines_per_thread = (uint32_t)(file_read_line_count / thread_count);
 
     for (uint8_t i = 0; i < thread_count; i++) {
-        thread_args[i] = (_file_arg){ 
+        thread_args[i] = (_file_arg) { 
             .file_name = file_name, 
             .start_line_index = 0 + (i * lines_per_thread), 
             .end_line_index =  0 + (i * lines_per_thread) + lines_per_thread
@@ -135,11 +156,12 @@ _file* file_read(char* file_name) {
             perror("pthread_create() failed");
             continue;
         }
+        created_threads++;
     }
 
     // TODO - Skip threads that didn't open or didn't open properly ( thread_result != 0)
     for (uint8_t i = 0; i < created_threads; i++) {
-        pthread_join(threads[i], NULL);
+        pthread_join(threads[i], NULL); // Check return value for errors
     }
         
     return __file;

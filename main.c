@@ -16,7 +16,7 @@ int main() {
     // printf("Sizeof uint64_t: %lu\n", sizeof(uint64_t));
     // printf("Number of lines: %ld\n", num_lines);
 
-    _file* file = file_read("geometry_for_ocelots.txt");
+    _file* file = file_read("text_1kb.txt");
     // fclose(fptr);
     // printf("Line count: %lu\n", file->line_count);
 
@@ -25,9 +25,9 @@ int main() {
     // }
     
     printf("\n");
-    double total_time = (double)(clock() - start_time) / CLOCKS_PER_SEC;
     file_free(file);
-    printf("\nTime elapsed: %f\n\n", total_time);
     // _tokens_free(tokens);
+    double total_time = (double)(clock() - start_time) / CLOCKS_PER_SEC;
+    printf("\nTime elapsed: %f\n\n", total_time);
     return 0;
 }
