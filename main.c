@@ -18,11 +18,11 @@ int main() {
 
     _file* file = file_read("text_1kb.txt");
     // fclose(fptr);
-    // printf("Line count: %lu\n", file->line_count);
+    printf("\nLine count: %lu\n", file->line_count);
 
-    // for(int i = 0; i < file->file_read_line_count; i++) {
-    //     printf("%lu - %s\n", file->lines[i].size, file->lines[i].start);
-    // }
+    for(int i = 0; i < file->line_count; i++) {
+        printf("%lu - %s\n", file->lines[i].size, file->lines[i].start);
+    }
     
     printf("\n");
     file_free(file);

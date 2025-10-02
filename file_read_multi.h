@@ -34,8 +34,10 @@ typedef struct {
 
 typedef struct {
     char* file_name;
-    uint32_t start_line_index;
-    uint32_t end_line_index;
+    uint32_t start_line;
+    uint32_t line_count;
+    uint32_t start_index;
+    uint32_t byte_count;
 } _file_arg;
 
 uint32_t file_read_line_count;
@@ -84,7 +86,7 @@ uint64_t file_read_get_lines(char* file_name) {
     for(int i = 0; i < lines; i++) {
         printf("\n%u", new_line_positions[i]);
     }
-    free(new_line_positions);
+    // free(new_line_positions);
     rewind(fptr);
     fclose(fptr);
 
@@ -103,22 +105,22 @@ void* file_read_partial(void* args) { // args is of type _file_arg*
     ssize_t line_size;
 
     // TODO - Need to set fseek() to the start index
-    uint32_t count = 0;
+    fseek(fptr, arg_internal->byte_count, arg_internal->start_index);
+    uint32_t count = arg_internal->start_line;
     while((line_size = getline(&line, &size, fptr) != -1)) {
-        // if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
-        //
-        // if (count < file_read_line_count) {
-        //     __file->lines[count].size = (uint64_t)line_size;
-        //     __file->lines[count].start = (char*)calloc(line_size, sizeof(char));
-        //     if (__file->lines[count].start != NULL) {
-        //         memcpy(__file->lines[count].start, line, line_size);
-        //     }
-        // }
-        // free(line);
-        // line = NULL; // Just in case
-        // count++;
+        if (line == NULL || strcmp(line, "") == 0 || strlen(line) <= 0) continue;
+
+        printf("\n%s\n", line);
+        if (count < arg_internal->line_count) {
+            __file->lines[count].size = (uint64_t)line_size;
+            __file->lines[count].start = (char*)calloc(line_size, sizeof(char));
+            if (__file->lines[count].start != NULL) {
+                memcpy(__file->lines[count].start, line, line_size);
+            }
+        }
         free(line);
-        line = NULL;
+        line = NULL; // Just in case
+        count++;
     }
     free(line);
     line = NULL;
@@ -137,19 +139,42 @@ _file* file_read(char* file_name) {
     __file->line_count = file_read_line_count;
     __file->lines = (_file_line*)calloc(file_read_line_count, sizeof(_file_line));
 
-    const uint8_t thread_count = 16; // Check if there is a better way to get a safe amount
-          uint8_t created_threads = 0;
-        pthread_t threads[thread_count];
-        _file_arg thread_args[thread_count];
-              int thread_result;
-         uint32_t lines_per_thread = (uint32_t)(file_read_line_count / thread_count);
+    const uint8_t thread_count = file_read_line_count < 16 ? file_read_line_count : 16; // Check if there is a better way to get a safe amount
+    uint8_t       created_threads = 0;
+    pthread_t     threads[thread_count];
+    _file_arg     thread_args[thread_count];
+    int           thread_result;
+    uint32_t      lines_per_thread = (uint32_t)(file_read_line_count / thread_count);
+    uint32_t      remainder_lines = 0;
 
+    if (file_read_line_count % thread_count != 0) {
+        remainder_lines = file_read_line_count % thread_count;
+    }
+
+    uint32_t start_index;
     for (uint8_t i = 0; i < thread_count; i++) {
+        start_index = (i == 0 ? 0 : new_line_positions[(i * lines_per_thread) - 1] + 1);
         thread_args[i] = (_file_arg) { 
             .file_name = file_name, 
-            .start_line_index = 0 + (i * lines_per_thread), 
-            .end_line_index =  0 + (i * lines_per_thread) + lines_per_thread
+            .start_line = i * lines_per_thread,
+            .line_count = lines_per_thread,
+            .start_index = start_index,
+            .byte_count = new_line_positions[((i + 1) * lines_per_thread) - 1] - start_index //  Diff of end-start indices
         };
+
+        if (i == thread_count - 1 && remainder_lines != 0) {
+            FILE* fptr = fopen(file_name, "r");
+            fseek(fptr, 0L, SEEK_END);
+            uint64_t file_size = ftell(fptr);
+            rewind(fptr);
+            fclose(fptr);
+            thread_args[i].line_count = lines_per_thread + remainder_lines;
+            thread_args[i].byte_count = file_size - new_line_positions[(i * lines_per_thread) - 1];
+        }
+
+        printf("\n\n\nThread %d:\n", i + 1);
+        printf("Start line: %d\nLine count: %d\nStart index: %d\nByte count: %d\n", thread_args[i].start_line, thread_args[i].line_count, thread_args[i].start_index, thread_args[i].byte_count);
+        printf("\n\n");
 
         thread_result = pthread_create(&threads[i], NULL, file_read_partial, (void*)&thread_args[i]);
         if (thread_result != 0) {
